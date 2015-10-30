@@ -11,10 +11,10 @@
 #include <SoftwareSerial.h>
 
 // set to 3 for III hardware, or 5 for V hardware
-#define PPK_VERSION 3
+#define PPK_VERSION 5
 
 // set to 1 to enable debug mode, which notes to the arduino console at 9600
-#define PPK_DEBUG 0
+#define PPK_DEBUG 1
 
 #if PPK_VERSION == 3
 #define VCC_PIN       2
@@ -32,7 +32,7 @@
 #define GND_PIN       2
 #endif
 
-#define PULLDOWN_PIN  15
+#define PULLDOWN_PIN  9
 // set this to any unused pin
 #define TX_PIN        11
 
