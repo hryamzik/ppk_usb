@@ -161,7 +161,7 @@ void config_keymap()
   // y9 row
   key_map[0b01001000] = '/';
   key_map[0b01001001] = KEY_UP_ARROW;
-  key_map[0b01001010] = 0; // "Special Function Four"
+  key_map[0b01001010] = 0; // "Special Function Four, Memo, setting up to PTT in skype"
   key_map[0b01001011] = 0;
   key_map[0b01001100] = 'm';
   key_map[0b01001101] = ',';
@@ -368,6 +368,44 @@ void loop()
             }
 
             fn_key_down = !key_up;
+          }
+          else if ((key_byte & MAP_MASK) == 0b01001010)
+          // special case the Memo key, skype PTT and skype mute with fn pressed
+          {
+            if (!fn_key_down)
+            {
+              if (PPK_DEBUG) Serial.print("Memo key down: ") && Serial.println(!key_up);
+              if (key_up)
+              {
+                Keyboard.release(KEY_UP_ARROW);
+                Keyboard.release(KEY_LEFT_CTRL);
+                Keyboard.release(KEY_LEFT_ALT);
+                Keyboard.release(KEY_LEFT_GUI);
+              }
+              else
+              {
+                Keyboard.press(KEY_LEFT_GUI);
+                Keyboard.press(KEY_LEFT_ALT);
+                Keyboard.press(KEY_LEFT_CTRL);
+                Keyboard.press(KEY_UP_ARROW);
+              }
+            }
+            else
+            {
+              if (PPK_DEBUG) Serial.print("fn + Memo key down: ") && Serial.println(!key_up);
+              if (key_up)
+              {
+                Keyboard.release('m');
+                Keyboard.release(KEY_LEFT_SHIFT);
+                Keyboard.release(KEY_LEFT_GUI);
+              }
+              else
+              {
+                Keyboard.press(KEY_LEFT_GUI);
+                Keyboard.press(KEY_LEFT_SHIFT);
+                Keyboard.press('m');
+              }
+            }
           }
           else if (PPK_DEBUG && !key_up)
           {
