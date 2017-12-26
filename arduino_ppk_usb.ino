@@ -9,6 +9,8 @@
  */
 
 #include <SoftwareSerial.h>
+#include <Mouse.h>
+#include <Keyboard.h>
 
 // set to 3 for III hardware, or 5 for V hardware
 #define PPK_VERSION 5
@@ -65,6 +67,14 @@ char key_byte = 0;
 int fn_key_down = 0;
 
 unsigned long last_comm = 0;
+
+unsigned long macros_last_run = 0;
+bool macros_enabled = false;
+
+String content = "";
+char character;
+
+int i;
 
 void config_keymap()
 {
@@ -213,13 +223,13 @@ void config_fnkeymap()
 
 void boot_keyboard()
 {
-  if (PPK_DEBUG)
-  {
-    // delay for a bit to allow for opening serial monitor etc.
-    for (int i = 0; i < 15; delay(1000 + i++)) Serial.print(".");
-
-    Serial.println("beginning keyboard boot sequence");
-  }
+//  if (PPK_DEBUG)
+//  {
+//    // delay for a bit to allow for opening serial monitor etc.
+//    for (int i = 0; i < 15; delay(1000 + i++)) Serial.print(".");
+//
+//    Serial.println("beginning keyboard boot sequence");
+//  }
 
   pinMode(VCC_PIN, OUTPUT);
   pinMode(GND_PIN, OUTPUT);
@@ -299,12 +309,62 @@ void setup()
   boot_keyboard();
 
   Keyboard.begin();
-
+  Mouse.begin();
   if (PPK_DEBUG) Serial.println("setup completed");
+}
+
+void paste()
+{
+  Serial.print("Paste: '");
+  Serial.print(content);
+  Serial.println("'");
+  Keyboard.print(content);
+}
+
+void pasteSlow()
+{
+  Serial.print("Paste slow: '");
+
+  for (i = 0; i < sizeof(content) - 1; i++){
+    Serial.print(content[i]);
+    Keyboard.print(content[i]);
+    delay(100);
+  }
+  Serial.println("'");
 }
 
 void loop()
 {
+//  Serial.print("TEST");
+
+  if (Serial.available()) {
+    content = "";
+    while(Serial.available()) {
+      character = Serial.read();
+      content.concat(character);
+    }
+
+    if (PPK_DEBUG && content != "") {
+      Serial.print("Buffer: ");
+      Serial.println(content);
+    }
+  }
+
+  if (macros_enabled)
+  {
+    if (macros_last_run + 10000 < millis())
+    {
+      if (PPK_DEBUG) Serial.println("Running macros");
+      //            Mouse.move(0, 1, 0);
+      //            Mouse.move(0, -1, 0);
+      Keyboard.press(KEY_UP_ARROW);
+      Keyboard.release(KEY_UP_ARROW);
+      Keyboard.press(KEY_RETURN);
+      Keyboard.release(KEY_RETURN);
+      macros_last_run = millis(); 
+    }
+  }
+  
   if (keyboard_serial.available())
   {
     for (int i = keyboard_serial.available(); i > 0; i--)
@@ -350,7 +410,11 @@ void loop()
             if (PPK_DEBUG)
             {
               Serial.print("key pressed: ");
-              Serial.println(key_code);
+              Serial.print(key_code);
+              String byte_string = ", code: [" + String("0b00000000").substring(0, 10 - String(key_byte, BIN).length());
+              Serial.print(byte_string);
+              Serial.print(key_byte, BIN);
+              Serial.println("]");
             }
 
             Keyboard.press(key_code);
@@ -405,6 +469,27 @@ void loop()
                 Keyboard.press(KEY_LEFT_SHIFT);
                 Keyboard.press('m');
               }
+            }
+          }
+          else if ((key_byte & MAP_MASK) == 0b00110011 && !key_up) // macros (Date key)
+          {
+            if (macros_enabled)
+            {
+              if (PPK_DEBUG) Serial.println("Disabling macros");
+            } else {
+              if (PPK_DEBUG) Serial.println("Enabling macros");
+            }
+            macros_enabled = !macros_enabled;
+          }
+          else if ((key_byte & MAP_MASK) == 0b00111011 && !key_up) // paste (Phome key) or pasteSlow (fn + Phome key)
+          {
+            if (!fn_key_down)
+            {
+              if (PPK_DEBUG) Serial.println("Pasting buffer...");
+              paste();
+            } else {
+              if (PPK_DEBUG) Serial.println("Pasting buffer slowly...");
+              pasteSlow();              
             }
           }
           else if (PPK_DEBUG && !key_up)
