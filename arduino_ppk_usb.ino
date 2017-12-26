@@ -323,12 +323,14 @@ void paste()
 
 void pasteSlow()
 {
-  Serial.print("Paste slow: '");
-
-  for (i = 0; i < sizeof(content) - 1; i++){
+  Serial.print("Paste slow[");
+  Serial.print(content.length());
+  Serial.print("]: '");
+  
+  for (i = 0; i < content.length(); i++){
     Serial.print(content[i]);
     Keyboard.print(content[i]);
-    delay(100);
+    delay(500);
   }
   Serial.println("'");
 }
