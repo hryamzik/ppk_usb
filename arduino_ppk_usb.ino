@@ -483,7 +483,7 @@ void loop()
             }
             macros_enabled = !macros_enabled;
           }
-          else if ((key_byte & MAP_MASK) == 0b00111011 && !key_up) // paste (Phome key) or pasteSlow (fn + Phome key)
+          else if ((key_byte & MAP_MASK) == 0b00111011 && !key_up) // paste (Phone key) or pasteSlow (fn + Phone key)
           {
             if (!fn_key_down)
             {
