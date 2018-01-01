@@ -53,6 +53,12 @@
 #define Y_MASK      0b01111000
 #define MAP_MASK    0b01111111
 
+// keys
+#define MEMO_KEY  0b01001010
+#define DATE_KEY  0b00110011
+#define PHONE_KEY 0b00111011
+#define TODO_KEY  0b01000010
+
 // wait this many milliseconds before making sure keyboard is still awake
 #define TIMEOUT 500000
 
@@ -70,6 +76,10 @@ unsigned long last_comm = 0;
 
 unsigned long macros_last_run = 0;
 bool macros_enabled = false;
+int macros_delay = 500;
+
+unsigned long mouse_last_move = 0;
+bool mouse_move_enabled = false;
 
 String content = "";
 char character;
@@ -315,24 +325,24 @@ void setup()
 
 void paste()
 {
-  Serial.print("Paste: '");
-  Serial.print(content);
-  Serial.println("'");
+  if (PPK_DEBUG) Serial.print("Paste: '");
+  if (PPK_DEBUG) Serial.print(content);
+  if (PPK_DEBUG) Serial.println("'");
   Keyboard.print(content);
 }
 
 void pasteSlow()
 {
-  Serial.print("Paste slow[");
-  Serial.print(content.length());
-  Serial.print("]: '");
+  if (PPK_DEBUG) Serial.print("Paste slow[");
+  if (PPK_DEBUG) Serial.print(content.length());
+  if (PPK_DEBUG) Serial.print("]: '");
   
   for (i = 0; i < content.length(); i++){
-    Serial.print(content[i]);
+    if (PPK_DEBUG) Serial.print(content[i]);
     Keyboard.print(content[i]);
     delay(500);
   }
-  Serial.println("'");
+  if (PPK_DEBUG) Serial.println("'");
 }
 
 void loop()
@@ -354,17 +364,27 @@ void loop()
 
   if (macros_enabled)
   {
-    if (macros_last_run + 10000 < millis())
+    if (macros_last_run + macros_delay < millis())
     {
-      if (PPK_DEBUG) Serial.println("Running macros");
-      //            Mouse.move(0, 1, 0);
-      //            Mouse.move(0, -1, 0);
-      Keyboard.press(KEY_UP_ARROW);
-      Keyboard.release(KEY_UP_ARROW);
+      if (PPK_DEBUG) Serial.print("Running macros (paste content and return), delay is ");
+      if (PPK_DEBUG) Serial.print(macros_delay);
+      if (PPK_DEBUG) Serial.println(" ms");
+//      Keyboard.press(KEY_UP_ARROW);
+//      Keyboard.release(KEY_UP_ARROW);
+//      Keyboard.press(KEY_RETURN);
+//      Keyboard.release(KEY_RETURN);
+      Keyboard.print(content);
       Keyboard.press(KEY_RETURN);
       Keyboard.release(KEY_RETURN);
       macros_last_run = millis(); 
     }
+  }
+  if (mouse_move_enabled && mouse_last_move + 10000 < millis() )
+  {
+    if (PPK_DEBUG) Serial.println("Moving mouse, delay is 10000 ms");
+    Mouse.move(0, 1, 0);
+    Mouse.move(0, -1, 0);
+    mouse_last_move = millis();
   }
   
   if (keyboard_serial.available())
@@ -435,12 +455,12 @@ void loop()
 
             fn_key_down = !key_up;
           }
-          else if ((key_byte & MAP_MASK) == 0b01001010)
-          // special case the Memo key, skype PTT and skype mute with fn pressed
+          else if ((key_byte & MAP_MASK) == PHONE_KEY)
+          // special case for skype PTT and skype mute with fn pressed
           {
             if (!fn_key_down)
             {
-              if (PPK_DEBUG) Serial.print("Memo key down: ") && Serial.println(!key_up);
+              if (PPK_DEBUG) Serial.print("PTT down: ") && Serial.println(!key_up);
               if (key_up)
               {
                 Keyboard.release(KEY_UP_ARROW);
@@ -458,7 +478,7 @@ void loop()
             }
             else
             {
-              if (PPK_DEBUG) Serial.print("fn + Memo key down: ") && Serial.println(!key_up);
+              if (PPK_DEBUG) Serial.print("fn + PTT down (mute): ") && Serial.println(!key_up);
               if (key_up)
               {
                 Keyboard.release('m');
@@ -473,7 +493,7 @@ void loop()
               }
             }
           }
-          else if ((key_byte & MAP_MASK) == 0b00110011 && !key_up) // macros (Date key)
+          else if ((key_byte & MAP_MASK) == TODO_KEY && !key_up) // macros
           {
             if (macros_enabled)
             {
@@ -483,7 +503,17 @@ void loop()
             }
             macros_enabled = !macros_enabled;
           }
-          else if ((key_byte & MAP_MASK) == 0b00111011 && !key_up) // paste (Phone key) or pasteSlow (fn + Phone key)
+          else if ((key_byte & MAP_MASK) == DATE_KEY && !key_up) // mouse move
+          {
+            if (mouse_move_enabled)
+            {
+              if (PPK_DEBUG) Serial.println("Disabling mouse move");
+            } else {
+              if (PPK_DEBUG) Serial.println("Enabling mouse move");
+            }
+            mouse_move_enabled = !mouse_move_enabled;
+          }
+          else if ((key_byte & MAP_MASK) == MEMO_KEY && !key_up) // paste or pasteSlow with fn key
           {
             if (!fn_key_down)
             {
